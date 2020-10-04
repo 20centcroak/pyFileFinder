@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pyFileFinder", 
-    version="0.1",
+    version="0.0.1",
     author="20centCroak",
     author_email="",
     description="module to easily find files in system, zip archives or ftp servers using regex",
