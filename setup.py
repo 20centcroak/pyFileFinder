@@ -11,7 +11,7 @@ setuptools.setup(
     description="module to easily find files in system, zip archives or ftp servers using regex",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/20centcroak/pyBaseApp",
+    url="https://github.com/20centcroak/pyFileFinder",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

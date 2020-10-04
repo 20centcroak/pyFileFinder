@@ -135,10 +135,10 @@ if __name__ == "__main__":
 Import logging and configure it to display messages in terminal.  
 To dot it easily, just add these lines:
 ```python
-from pycroaktools.default.configuration import Configuration
+from pyBaseApp.configuration import Configuration
 import logging
 settings = Configuration().default('findFtp')
 ```
 
-Using pycroaktools.default.configuration, it is also possible to define the settings in a yml file named "findFtp.yml"  
+Using pyBaseApp.configuration, it is also possible to define the settings in a yml file named "findFtp.yml"  
 (it should be the name given by the argument of default, omitting ".yml")
