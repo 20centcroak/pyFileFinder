@@ -1,0 +1,1 @@
+from pyFileFinder.finder import Finder
