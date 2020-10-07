@@ -18,17 +18,20 @@ Available keys are {"parent", "regex", "depth", "stopWhenFound", "goIntoFoundFol
 
 - parent: gives the root directory into which files or folders should be searched. 
 If not set, the current folder (folder from which the script is launched) will be used
+When looking into an archive (zip file), this setting should be the path to the zip archive.
 
 - regex: regular expression used to check if a file or folder is part of the search. 
 Default value is '.*' : it looks for any file or folder. 
-If for example we want to list all files and folders of the parent folder, this default value may be used in association with depth=1
+Check your regex using [regex101](https://regex101.com/) for example
+For example if we want to list all files and folders of the parent folder, this default value may be used in association with depth=1
 
 - depth: depth of research. If set to 0, then files and folders are only searched in the parent folder. 
 If set to n (n as an integer), then search goes up to the n-th subdirectory. 
 Default value is -1, which means that search doesn't stop while there is no more subfolder.
 
-- stopWhenFound: as soon as a file or folder complies with the regex, the search is topped and the found file or folder is returned 
-(in an array) to satisfy the more generic research. Default value is True.
+- stopWhenFound: as soon as a search return results complying with the regex, the search is stopped and the found files or folders are returned. 
+Note that, even if the iterative process is stopped, the result may contain many file or folders when multiple files inside a folder comply with the regex for example.  
+Default value is True.
 
 - goIntoFoundFolder: When False, if a folder is searched and found, does not look inside for subfolders that comply with regex. 
 This different of stopWhenFound: it may find multiple folders but does not look into a found folder. Default value is False.
@@ -43,11 +46,12 @@ This connection is returned when calling ftplib FTP(host, user, pwd)
 
 2. Call one of the above functions:
 ```python
-finder.recursiveFindFiles()
-finder.recursiveFindFilesInFtp()
-finder.recursiveFindFilesInZip()
-finder.recursiveFindFolders()
-recursiveFindFolderInFtp()
+finder = Finder(settings)
+finder.findFolders()
+finder.findFolderInFtp()
+finder.findFiles()
+finder.findFilesInFtp()
+finder.findFilesInZip()
 ```
 
 ## Examples
@@ -62,14 +66,14 @@ if __name__ == "__main__":
     # step1: find folders
     settings = {'parent': 'C:/myFolder', 'regex': 'level',
                 'depth': 3, 'stopWhenFound': False, 'goIntoFolder': False}
-    folders = Finder(settings).recursiveFindFolders()
+    folders = Finder(settings).findFolders()
 
     # step2: find zip archives in the found folders
     zipsettings = {'regex': r'myarchive.*\.zip', 'caseSensitive': False}
     zips = []
     for folder in folders:
         zipsettings['parent'] = folder
-        zipFile = Finder(zipsettings).recursiveFindFiles()
+        zipFile = Finder(zipsettings).findFiles()
         if zipFile:
             zips+=zipFile
 
@@ -78,7 +82,7 @@ if __name__ == "__main__":
     xmls = []
     for zip in zips:
         xmlsettings['parent'] = zip
-        xmlFiles = Finder(xmlsettings).recursiveFindFilesInZip()
+        xmlFiles = Finder(xmlsettings).findFilesInZip()
         if xmlFiles:
             xmls += xmlFiles
 
@@ -90,7 +94,7 @@ if __name__ == "__main__":
 Suppose that you want to let a user search for files, in a ftp repository, based on a regex after prompting for its username and password to connect the ftp server, and for regex to look for specific files. The search should not look into .git folders.  
 
 ```python
-from files.finder import Finder
+from pyFileFinder import Finder
 import os
 from ftplib import FTP, error_perm
 from socket import gaierror
@@ -120,7 +124,7 @@ if __name__ == "__main__":
     settings['regex'] = input(
         'search: ') if not 'regex' in settings else settings['regex']
 
-    files = Finder(settings).recursiveFindFilesInFtp()
+    files = Finder(settings).findFilesInFtp()
 
     if not files:
         print('no file found')

@@ -15,6 +15,7 @@ from datetime import datetime
 from zipfile import ZipFile
 from pathlib import Path
 
+
 class Finder():
     """
     The Finder class offers convenient functions to search files and folders based on regex.
@@ -75,7 +76,7 @@ class Finder():
         if files is None:
             return None
         return files[0]
-    
+
     def findFolders(self):
         """
         find folders in the os directory according to the settings defined when building the Finder object
@@ -83,7 +84,7 @@ class Finder():
         self.initialDepth = self.parent.count(os.path.sep)
         return self._findFolders(self._walkFile)
 
-    def findFolderInFtp(self):
+    def findFoldersInFtp(self):
         """
         find folders in the ftp location according to the settings defined when building the Finder object
         """
@@ -168,7 +169,7 @@ class Finder():
         """
         Walk through Zip archive
         """
-        zipFile = ZipFile(path)
+        zipFile = ZipFile(path, 'r')
         itemsInZip = zipFile.namelist()
         dirs = []
         nondirs = []
@@ -181,33 +182,36 @@ class Finder():
                 dirs.append(groups[-2])
             else:
                 nondirs.append(groups[-1])
-            # path = '/'
-            # for index in range(0, len(groups)-1):
-            #     path += groups[index]+'/'
         yield path, dirs, nondirs
 
     def _listdirFTP(self, _path):
+        dirs = []
+        nondirs = []
+        file_list = self._getFtpFileInfo(_path)
+        for info in file_list:
+            ls_type, name = info[0], info[-1]
+            if re.match(r'^\.+$', name):
+                continue
+            if ls_type.startswith('d'):
+                dirs.append(name)
+            else:
+                nondirs.append(name)
+        return dirs, nondirs
+
+    def _getFtpFileInfo(self, _path):
         """
         return files and directory names within a path (directory)
         """
-        file_list, dirs, nondirs = [], [], []
+        file_list = []
         try:
             self.ftpConnection.cwd(_path)
         except Exception as exp:
             logging.error(exp.__str__(), _path)
-            return [], []
+            return []
         else:
             self.ftpConnection.retrlines(
                 'LIST', lambda x: file_list.append(x.split()))
-            for info in file_list:
-                ls_type, name = info[0], info[-1]
-                if re.match(r'^\.+$', name):
-                    continue
-                if ls_type.startswith('d'):
-                    dirs.append(name)
-                else:
-                    nondirs.append(name)
-            return dirs, nondirs
+        return file_list
 
     def _walkFTP(self, path):
         """
@@ -215,9 +219,9 @@ class Finder():
         """
         dirs, nondirs = self._listdirFTP(path)
         num_sep_this = path.count('/')
-        if self.initialDepth + self.depth <= num_sep_this and self.depth > -1:
-            del dirs[:]
         yield path, dirs, nondirs
+        if self.initialDepth + self.depth <= num_sep_this and self.depth > -1:
+            del dirs[:]        
         for name in dirs:
             yield from self._walkFTP(path+'/'+name)
             self.ftpConnection.cwd('.')
