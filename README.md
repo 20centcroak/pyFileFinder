@@ -56,6 +56,8 @@ finder.findFilesInZip()
 
 ## Examples
 
+Note that unit tests cover the full use of Finder features, see them here: [test_finder.py](https://github.com/20centcroak/pyFileFinder/blob/main/tests/unit/test_finder.py)
+
 ### Example1
 Suppose that, starting from C:\myFolder, you want to look for folders for which names contain "level". These folders shouldn't be far away from 3 subfolders of C:\myFolder. Then, for each of these folders, you want to find 1 zip archive for which name contains myarchive. Finally you want to search in these zip archives all xml files. Here is the way to proceed :
 ```python
