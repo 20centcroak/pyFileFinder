@@ -20,7 +20,8 @@ Available keys are {"parent", "regex", "depth", "stopWhenFound", "goIntoFoundFol
 If not set, the current folder (folder from which the script is launched) will be used
 When looking into an archive (zip file), this setting should be the path to the zip archive.
 
-- regex: regular expression used to check if a file or folder is part of the search. 
+- regex: regular expression used to check if a file or folder is part of the search.
+It could be a regex expression or a list of regex expressions 
 Default value is '.*' : it looks for any file or folder. 
 Check your regex using [regex101](https://regex101.com/) for example
 For example if we want to list all files and folders of the parent folder, this default value may be used in association with depth=1
@@ -48,11 +49,16 @@ This connection is returned when calling ftplib FTP(host, user, pwd)
 ```python
 finder = Finder(settings)
 finder.findFolders()
+finder.matchFolders()
 finder.findFolderInFtp()
 finder.findFiles()
+finder.matchFiles()
 finder.findFilesInFtp()
 finder.findFilesInZip()
 ```
+
+matchFiles or matchFolders return a tuple (ok, result_of_search) where ok is True if each regex expression returns a result and result_of_search 
+is identical of the result of findFiles (resp. findFolders)
 
 ## Examples
 

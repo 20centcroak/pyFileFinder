@@ -32,6 +32,7 @@ class Finder():
         If not set, the current folder (folder from which the script is launched) will be used
 
         - regex: regular expression used to check if a file or folder is part of the search. 
+        It could be a single expression or a list of expressions
         Default value is '.*' : it looks for any file or folder. 
         If for example we want to list all files and folders of the parent folder, this default value may be used in association with depth=1
 
@@ -55,7 +56,7 @@ class Finder():
 
         """
         self.parent = os.getcwd()
-        self.regex = '.*'
+        self.regex = ['.*']
         self.depth = -1
         self.stopWhenFound = True
         self.goIntoFoundFolder = False
@@ -82,14 +83,24 @@ class Finder():
         find folders in the os directory according to the settings defined when building the Finder object
         """
         self.initialDepth = self.parent.count(os.path.sep)
-        return self._findFolders(self._walkFile)
+        return self._findAllFolders(self._walkFile)
+
+    def matchFolders(self):
+        """
+        find folders in os directory according to the settings defined when building the Finder object; 
+        If every regex returns a result, then match is true
+        """
+        self.initialDepth = self.parent.count(os.path.sep)
+        logging.info('looking for {} in {}'.format(self.regex, self.parent))
+        founds = self._findAllFolders(self._walkFile)
+        return (None not in founds, founds)
 
     def findFoldersInFtp(self):
         """
         find folders in the ftp location according to the settings defined when building the Finder object
         """
         self.initialDepth = self.parent.count('/')
-        return self._findFolders(self._walkFTP, sep='/')
+        return self._findAllFolders(self._walkFTP, sep='/')
 
     def findFiles(self):
         """
@@ -97,21 +108,31 @@ class Finder():
         """
         self.initialDepth = self.parent.count(os.path.sep)
         logging.info('looking for {} in {}'.format(self.regex, self.parent))
-        return self._findFiles(self._walkFile)
+        return self._findAllFiles(self._walkFile)
+
+    def matchFiles(self):
+        """
+        find files in os directory according to the settings defined when building the Finder object; 
+        If every regex returns a result, then match is true
+        """
+        self.initialDepth = self.parent.count(os.path.sep)
+        logging.info('looking for {} in {}'.format(self.regex, self.parent))
+        founds = self._findAllFiles(self._walkFile)
+        return (None not in founds, founds)
 
     def findFilesInFtp(self):
         """
         find files in ftp location according to the settings defined when building the Finder object
         """
         self.initialDepth = self.parent.count('/')
-        return self._findFiles(self._walkFTP, sep='/')
+        return self._findAllFiles(self._walkFTP, sep='/')
 
     def findFilesInZip(self):
         """
         find files in a zip archive according to the settings defined when building the Finder object.
         In this case the "parent" setting should be the zip path
         """
-        return self._findFiles(self._walkZip, sep='/')
+        return self._findAllFiles(self._walkZip, sep='/')
 
     def _setProperties(self, settings: dict):
         if not settings:
@@ -119,11 +140,19 @@ class Finder():
         for key in settings:
             if hasattr(self, key):
                 setattr(self, key, settings[key])
+        if type(self.regex) is not list:
+            self.regex = [self.regex]
 
-    def _findFiles(self, callback, sep=os.path.sep):
+    def _findAllFiles(self, callback, sep=os.path.sep):
+        found_files = []
+        for regex in self.regex:
+            found_files += self._findFiles(callback, sep, regex)
+        return found_files
+
+    def _findFiles(self, callback, sep, regex):
         foundFiles = []
         flags = 0 if self.caseSensitive else re.IGNORECASE
-        compiled = re.compile(self.regex, flags)
+        compiled = re.compile(regex, flags)
         for dirpath, subdirs, files in callback(self.parent):
             logging.info('scanning {}'.format(dirpath))
             foundFiles += [dirpath+sep+filename
@@ -135,11 +164,17 @@ class Finder():
                     subdirs.remove(avoidFolder)
         return foundFiles
 
-    def _findFolders(self, callback, sep=os.path.sep):
+    def _findAllFolders(self, callback, sep=os.path.sep):
+        found_folders = []
+        for regex in self.regex:
+            found_folders += self._findFolders(callback, sep, regex)
+        return found_folders
+
+    def _findFolders(self, callback, sep, regex):
         folders = []
         flags = 0 if self.caseSensitive else re.IGNORECASE
         try:
-            compiled = re.compile(self.regex, flags)
+            compiled = re.compile(regex, flags)
         except:
             logging.error('wrong regex search')
             return
