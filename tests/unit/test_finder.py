@@ -87,6 +87,21 @@ class TestFinder(unittest.TestCase):
         result = [os.path.basename(file) for file in files]
         self.assertCountEqual(result,['fiLe2_1.txt', 'file2_2.txt', 'file1_2.txt'])
 
+    def test_match_files2(self):
+        settings = {
+            'parent':'tests/unit/resources',
+            'regex': [r'file2', r'filex_2'],
+            'caseSensitive': False,
+            'depth':-1,
+            'stopWhenFound': False
+        }
+        ok, files = Finder(settings).matchFiles()
+        self.assertFalse(ok)
+        self.assertTrue(files)
+        self.assertEqual(len(files),2)
+        result = [os.path.basename(file) for file in files]
+        self.assertCountEqual(result,['fiLe2_1.txt', 'file2_2.txt'])
+
     def test_file_depth(self):
         settings = {
             'parent':'tests/unit/resources',

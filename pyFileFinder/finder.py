@@ -117,8 +117,17 @@ class Finder():
         """
         self.initialDepth = self.parent.count(os.path.sep)
         logging.info('looking for {} in {}'.format(self.regex, self.parent))
-        founds = self._findAllFiles(self._walkFile)
-        return (None not in founds, founds)
+        founds = []
+        match = True
+        all_regex = self.regex.copy()
+        for reg in all_regex:
+            self.regex = [reg]
+            files = self._findAllFiles(self._walkFile)
+            match = match and not not files
+            founds += files
+        print(founds)
+        return (match, founds)
+        
 
     def findFilesInFtp(self):
         """
