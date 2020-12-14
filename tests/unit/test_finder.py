@@ -80,7 +80,7 @@ class TestFinder(unittest.TestCase):
             'depth':-1,
             'stopWhenFound': False
         }
-        ok, files = Finder(settings).matchFiles()
+        ok, files, _ = Finder(settings).matchFiles()
         self.assertTrue(ok)
         self.assertTrue(files)
         self.assertEqual(len(files),3)
@@ -95,12 +95,13 @@ class TestFinder(unittest.TestCase):
             'depth':-1,
             'stopWhenFound': False
         }
-        ok, files = Finder(settings).matchFiles()
+        ok, files, missed = Finder(settings).matchFiles()
         self.assertFalse(ok)
         self.assertTrue(files)
         self.assertEqual(len(files),2)
         result = [os.path.basename(file) for file in files]
         self.assertCountEqual(result,['fiLe2_1.txt', 'file2_2.txt'])
+        self.assertCountEqual(missed,[r'filex_2'])
 
     def test_file_depth(self):
         settings = {
