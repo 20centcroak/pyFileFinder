@@ -94,7 +94,7 @@ class Finder():
         self.initialDepth = self.parent.count(os.path.sep)
         logging.debug('looking for {} in {}'.format(self.regex, self.parent))
         founds, missed = self._findAllFolders(self._walkFile)
-        return (None not in founds, founds, missed)
+        return (len(missed) == 0, founds, missed)
 
     def findFoldersInFtp(self):
         """
@@ -163,9 +163,10 @@ class Finder():
         found_files = []
         missed = []
         for regex in self.regex:
-            found_files += self._findFiles(callback, sep, regex)
-            if not found_files:
+            files = self._findFiles(callback, sep, regex)
+            if not files:
                 missed.append(regex)
+            found_files += files
         return found_files, missed
 
     def _findFiles(self, callback, sep, regex):
@@ -187,10 +188,13 @@ class Finder():
         found_folders = []
         missed = []
         for regex in self.regex:
+            logging.debug('regex=%s', regex)
             folders = self._findFolders(callback, sep, regex)
+            logging.debug('folders=%s', folders)
             if not folders:
-                missed += regex
-            found_folders += self._findFolders(callback, sep, regex)
+                logging.debug('folders=%s', folders)
+                missed.append(regex)
+            found_folders += folders
         return found_folders, missed
 
     def _findFolders(self, callback, sep, regex):
