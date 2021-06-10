@@ -10,8 +10,6 @@ Many options are available to stop or continue search when a file or folder is f
 import logging
 import os
 import re
-from ftplib import FTP
-from datetime import datetime
 from zipfile import ZipFile
 from pathlib import Path
 
