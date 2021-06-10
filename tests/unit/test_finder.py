@@ -29,9 +29,8 @@ class TestFinder(unittest.TestCase):
             'caseSensitive': False
         }
         folders = Finder(settings).findFolders()
-        self.assertTrue(folders)
-        self.assertEqual(len(folders), 1)
-        self.assertEqual(folders[0], 'folder3')
+        found = [folder.name for folder in folders]
+        self.assertCountEqual(found, ['folder3'])
 
     def test_folder_go_in_folder(self):
         settings = {
@@ -41,10 +40,8 @@ class TestFinder(unittest.TestCase):
             'stopWhenFound': False
         }
         folders = Finder(settings).findFolders()
-        self.assertTrue(folders)
-        self.assertEqual(len(folders), 3)
-        result = [os.path.basename(folder) for folder in folders]
-        self.assertCountEqual(result, ['folder1', 'folder2', 'folder3'])
+        found = [folder.name for folder in folders]
+        self.assertCountEqual(found, ['folder1', 'folder2', 'folder3'])
 
     def test_folder_dont_go_in_folder(self):
         settings = {
@@ -54,10 +51,8 @@ class TestFinder(unittest.TestCase):
             'stopWhenFound': False
         }
         folders = Finder(settings).findFolders()
-        self.assertTrue(folders)
-        self.assertEqual(len(folders), 2)
-        result = [os.path.basename(folder) for folder in folders]
-        self.assertCountEqual(result, ['folder1', 'folder3'])
+        found = [folder.name for folder in folders]
+        self.assertCountEqual(found, ['folder1', 'folder3'])
 
     def test_file_case_sensitive(self):
         settings = {
@@ -68,10 +63,8 @@ class TestFinder(unittest.TestCase):
             'stopWhenFound': False
         }
         files = Finder(settings).findFiles()
-        self.assertTrue(files)
-        self.assertEqual(len(files), 2)
-        result = [os.path.basename(file) for file in files]
-        self.assertCountEqual(result, ['file2_2.txt', 'file1_2.txt'])
+        found = [file.name for file in files]
+        self.assertCountEqual(found, ['file2_2.txt', 'file1_2.txt'])
 
     def test_file(self):
         settings = {
@@ -82,11 +75,9 @@ class TestFinder(unittest.TestCase):
             'stopWhenFound': False
         }
         files = Finder(settings).findFiles()
-        self.assertTrue(files)
-        self.assertEqual(len(files), 3)
-        result = [os.path.basename(file) for file in files]
+        found = [file.name for file in files]
         self.assertCountEqual(
-            result, ['fiLe2_1.txt', 'file2_2.txt', 'file1_2.txt'])
+            found, ['fiLe2_1.txt', 'file2_2.txt', 'file1_2.txt'])
 
     def test_match_files(self):
         settings = {
@@ -100,7 +91,7 @@ class TestFinder(unittest.TestCase):
         self.assertTrue(ok)
         self.assertTrue(files)
         self.assertEqual(len(files), 3)
-        result = [os.path.basename(file) for file in files]
+        result = [file.name for file in files]
         self.assertCountEqual(
             result, ['fiLe2_1.txt', 'file2_2.txt', 'file1_2.txt'])
 
@@ -116,7 +107,7 @@ class TestFinder(unittest.TestCase):
         self.assertFalse(ok)
         self.assertTrue(files)
         self.assertEqual(len(files), 2)
-        result = [os.path.basename(file) for file in files]
+        result = [file.name for file in files]
         self.assertCountEqual(result, ['fiLe2_1.txt', 'file2_2.txt'])
         self.assertCountEqual(missed, [r'filex_2'])
 
@@ -131,7 +122,7 @@ class TestFinder(unittest.TestCase):
         self.assertFalse(ok)
         self.assertTrue(folders)
         self.assertEqual(len(folders), 1)
-        result = [os.path.basename(folder) for folder in folders]
+        result = [folder.name for folder in folders]
         self.assertCountEqual(result, ['folder2'])
         self.assertCountEqual(missed, [r'fil.*2'])
 
@@ -142,10 +133,10 @@ class TestFinder(unittest.TestCase):
             'stopWhenFound': False,
             'goIntoFoundFolder': True
         }
-        ok, folders, missed = Finder(settings).matchFolders()
+        ok, folders, _ = Finder(settings).matchFolders()
         self.assertTrue(ok)
         self.assertTrue(folders)
-        result = [os.path.basename(folder) for folder in folders]
+        result = [folder.name for folder in folders]
         self.assertCountEqual(result, ['folder2', 'folder3'])
 
     def test_file_depth(self):
@@ -156,9 +147,7 @@ class TestFinder(unittest.TestCase):
             'stopWhenFound': False
         }
         files = Finder(settings).findFiles()
-        self.assertTrue(files)
-        self.assertEqual(len(files), 3)
-        result = [os.path.basename(file) for file in files]
+        result = [file.name for file in files]
         self.assertCountEqual(
             result, ['file1_1.txt', 'file1_2.txt', 'file3_1.txt'])
 
@@ -171,9 +160,7 @@ class TestFinder(unittest.TestCase):
             'stopWhenFound': False
         }
         files = Finder(settings).findFiles()
-        self.assertTrue(files)
-        self.assertEqual(len(files), 2)
-        result = [os.path.basename(file) for file in files]
+        result = [file.name for file in files]
         self.assertCountEqual(result, ['file1_1.txt', 'file1_2.txt'])
 
     def test_zip(self):
@@ -183,9 +170,7 @@ class TestFinder(unittest.TestCase):
             'stopWhenFound': False
         }
         files = Finder(settings).findFilesInZip()
-        self.assertTrue(files)
-        self.assertEqual(len(files), 1)
-        result = [os.path.basename(file) for file in files]
+        result = [file.name for file in files]
         self.assertCountEqual(result, ['archive.txt'])
 
     def test_ftp_all_files(self):
@@ -204,7 +189,7 @@ class TestFinder(unittest.TestCase):
         finder._getFtpFileInfo = MagicMock(return_value=return_value)
 
         files = finder.findFilesInFtp()
-        result = [os.path.basename(file) for file in files]
+        result = [file.split('/')[-1] for file in files]
         expected = ['file1', 'file2']
         self.assertCountEqual(result, expected)
 
@@ -213,6 +198,7 @@ class TestFinder(unittest.TestCase):
             'parent': 'tests/unit/resources',
             'regex': r'.*',
             'caseSensitive': False,
+            'stopWhenFound': True,
             'depth': 0
         }
         finder = Finder(settings)
@@ -223,7 +209,7 @@ class TestFinder(unittest.TestCase):
         finder._getFtpFileInfo = MagicMock(return_value=return_value)
 
         files = finder.findFilesInFtp()
-        result = [os.path.basename(file) for file in files]
+        result = [file.split('/')[-1] for file in files]
         expected = ['file1']
         self.assertCountEqual(result, expected)
 

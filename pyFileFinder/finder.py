@@ -10,9 +10,9 @@ Many options are available to stop or continue search when a file or folder is f
 import logging
 import os
 import re
+from typing import Generator
 from zipfile import ZipFile
 from pathlib import Path
-
 
 class Finder():
     """
@@ -53,7 +53,7 @@ class Finder():
         This connection is returned when calling ftplib FTP(host, user, pwd)
 
         """
-        self.parent = os.getcwd()
+        self.parent = Path(os.getcwd())
         self.regex = ['.*']
         self.depth = -1
         self.stopWhenFound = True
@@ -62,91 +62,154 @@ class Finder():
         self.caseSensitive = True
         self.ftpConnection = None
         self._setProperties(settings)
-        self.parent = str(Path(self.parent).resolve()
-                          ) if self.parent != '/' else self.parent
-        self.initialDepth = 0
 
-    def getRootFile(self, parent, regex):
-        self.parent = parent
+        # if self.parent != '/':
+        #     self.parent = Path(self.parent).resolve()
+        #     if not self.parent.exists():
+        #         raise FileNotFoundError('parent folder {} not found'.format(self.parent))
+
+
+    def getFile(self, parent:os.PathLike, regex: str)->Path:
+        """
+        basic regex file search - case insensitive and only in given parent folder - return first found file matching the regex.
+
+        Parameters:
+        ----------
+        parent: PathLike of parent folder where to search for file
+        regex: regex that file should match
+
+        Returns:
+        -------
+        Path of first found file matching the regex - None, if no file is found
+        """
+        self.parent = Path(parent)
         self.depth = 0
         self.caseSensitive = False
         self.regex = regex
         files = self.findFiles()
-        if files is None:
+        try:
+            return next(files)
+        except StopIteration:
             return None
-        return files[0]
 
-    def findFolders(self):
+    def findFolders(self)->Generator:
         """
-        find folders in the os directory according to the settings defined when building the Finder object
-        """
-        self.initialDepth = self.parent.count(os.path.sep)
-        folders, _ = self._findAllFolders(self._walkFile)
-        return folders
+        find folders in the os directory according to the settings defined when building the Finder object.
 
-    def matchFolders(self):
+        Returns:
+        -------
+        iterator which yields found folders
         """
-        find folders in os directory according to the settings defined when building the Finder object; 
+        logging.debug('looking for folders {} in {}'.format(self.regex, self.parent))
+        return self._findAllFolders(self._walkFile)
+
+    def matchFolders(self)->tuple:
+        """
+        find folders according to the settings defined when building the Finder object; 
         If every regex returns a result, then match is true
-        """
-        self.initialDepth = self.parent.count(os.path.sep)
-        logging.debug('looking for {} in {}'.format(self.regex, self.parent))
-        founds, missed = self._findAllFolders(self._walkFile)
-        return (len(missed) == 0, founds, missed)
 
-    def findFoldersInFtp(self):
+        Returns:
+        -------
+        tuple of (match, founds, missed) where:
+            - match is true if each regex returns a result, false otherwise
+            - founds = found folder Paths
+            - missed = list of regex that do not return a result (failures)
+        """
+        logging.debug('looking for folders {} in {}'.format(self.regex, self.parent))
+        founds = []
+        missed = []
+        match = True
+
+        all_regex = self.regex.copy()
+        for reg in all_regex:
+            found = False
+            self.regex = [reg]
+            folders = self._findAllFolders(self._walkFile)
+            for folder in folders:
+                found = True
+                founds.append(folder)
+            match = match and found
+            if not found:
+                missed.append(reg)
+        return (match, founds, missed)
+
+    def findFoldersInFtp(self)->Generator:
         """
         find folders in the ftp location according to the settings defined when building the Finder object
-        """
-        self.initialDepth = self.parent.count('/')
-        folders, _ = self._findAllFolders(self._walkFTP, sep='/')
-        return folders
 
-    def findFiles(self):
+        Returns:
+        -------
+        iterator which yields found folders
+        """
+        logging.debug('looking for folders {} in ftp {}'.format(self.regex, self.parent))
+        return self._findAllFolders(self._walkFTP, True)
+
+    def findFiles(self)->Generator:
         """
         find files in os directory according to the settings defined when building the Finder object
-        """
-        self.initialDepth = self.parent.count(os.path.sep)
-        logging.debug('looking for {} in {}'.format(self.regex, self.parent))
-        files, _ = self._findAllFiles(self._walkFile)
-        return files
 
-    def matchFiles(self):
+        Returns:
+        -------
+        iterator which yields found files
+        """
+        logging.debug('looking for files {} in {}'.format(self.regex, self.parent))
+        return self._findAllFiles(self._walkFile)
+
+    def matchFiles(self)->tuple:
         """
         find files in os directory according to the settings defined when building the Finder object; 
         If every regex returns a result, then match is true
+
+        Returns:
+        -------
+        tuple of (match, founds, missed) where:
+            - match is true if each regex returns a result, false otherwise
+            - founds = found file Paths
+            - missed = list of regex that do not return a result (failures)
         """
-        self.initialDepth = self.parent.count(os.path.sep)
-        logging.debug('looking for {} in {}'.format(self.regex, self.parent))
+        logging.debug('looking for files {} in {}'.format(self.regex, self.parent))
         founds = []
-        regex = []
+        missed = []
         match = True
+
         all_regex = self.regex.copy()
         for reg in all_regex:
+            logging.debug('test regex %s', reg)
+            found = False
             self.regex = [reg]
-            files, missed = self._findAllFiles(self._walkFile)
-            match = match and not not files
-            founds += files
-            if missed:
-                regex += missed
-        
-        return (match, founds, regex)
+            files = self._findAllFiles(self._walkFile)
+            for file in files:
+                logging.debug('found %s', file)
+                found = True
+                founds.append(file)
+            match = match and found
+            logging.debug('match %s', match)
+            if not found:
+                missed.append(reg)
+        return (match, founds, missed)
 
-    def findFilesInFtp(self):
+    def findFilesInFtp(self)->Generator:
         """
         find files in ftp location according to the settings defined when building the Finder object
+        
+        Returns:
+        -------
+        iterator which yields found files
         """
-        self.initialDepth = self.parent.count('/')
-        files, _ = self._findAllFiles(self._walkFTP, sep='/')
-        return files
+        logging.debug('looking for files {} in ftp {}'.format(self.regex, self.parent))
+        return self._findAllFiles(self._walkFTP, True)
 
-    def findFilesInZip(self):
+    def findFilesInZip(self)->Generator:
         """
         find files in a zip archive according to the settings defined when building the Finder object.
         In this case the "parent" setting should be the zip path
+        
+        Returns:
+        -------
+        iterator which yields found files
         """
-        files, _ = self._findAllFiles(self._walkZip, sep='/')
-        return files
+        logging.debug('looking for files {} in zip {}'.format(self.regex, self.parent))
+        return self._findAllFiles(self._walkZip)
 
     def _setProperties(self, settings: dict):
         if not settings:
@@ -154,75 +217,81 @@ class Finder():
         for key in settings:
             if hasattr(self, key):
                 setattr(self, key, settings[key])
+            else:
+                raise KeyError('{} is not a recognised settings')
         if type(self.regex) is not list:
             self.regex = [self.regex]
 
-    def _findAllFiles(self, callback, sep=os.path.sep):
-        found_files = []
-        missed = []
+    def _findAllFiles(self, callback, isftp = False):
         for regex in self.regex:
-            files = self._findFiles(callback, sep, regex)
-            if not files:
-                missed.append(regex)
-            found_files += files
-        return found_files, missed
+            files = self._findFiles(callback, regex, isftp)
+            for file in files:
+                yield file
 
-    def _findFiles(self, callback, sep, regex):
-        foundFiles = []
+    def _findFiles(self, callback, regex, isftp = False):
+        if not isftp:
+            self.parent = Path(self.parent).resolve()
+            if not self.parent.exists():
+                raise FileNotFoundError('parent folder not found')
         flags = 0 if self.caseSensitive else re.IGNORECASE
         compiled = re.compile(regex, flags)
+        found = False
         for dirpath, subdirs, files in callback(self.parent):
             logging.debug('scanning {}'.format(dirpath))
-            foundFiles += [dirpath+sep+filename
-                           for filename in files if compiled.search(filename)]
-            if self.stopWhenFound and foundFiles:
-                return [foundFiles[0]]
+            for filename in files:
+                if compiled.search(filename):
+                    found = True
+                    if isftp:
+                        yield dirpath + '/' + filename
+                    else:
+                        yield Path(dirpath)/filename
+                if self.stopWhenFound and found:
+                    return
             for avoidFolder in self.avoidFolders:
                 if avoidFolder in subdirs:
                     subdirs.remove(avoidFolder)
-        return foundFiles
 
-    def _findAllFolders(self, callback, sep=os.path.sep):
-        found_folders = []
-        missed = []
+    def _findAllFolders(self, callback, isftp=False):
         for regex in self.regex:
-            logging.debug('regex=%s', regex)
-            folders = self._findFolders(callback, sep, regex)
-            logging.debug('folders=%s', folders)
-            if not folders:
-                logging.debug('folders=%s', folders)
-                missed.append(regex)
-            found_folders += folders
-        return found_folders, missed
+            folders = self._findFolders(callback, regex, isftp)
+            for folder in folders:
+                yield folder
 
-    def _findFolders(self, callback, sep, regex):
-        folders = []
+    def _findFolders(self, callback, regex, isftp = False):
+        if not isftp:
+            self.parent = Path(self.parent).resolve()
+            if not self.parent.exists():
+                raise FileNotFoundError('parent folder not found')
         flags = 0 if self.caseSensitive else re.IGNORECASE
-        try:
-            compiled = re.compile(regex, flags)
-        except:
-            logging.error('wrong regex search')
-            return
+        compiled = re.compile(regex, flags)
+        found = False
+        
         for dirpath, subdirs, _ in callback(self.parent):
             logging.debug('processing folder {}'.format(dirpath))
-            founds = [subdir for subdir in subdirs if compiled.search(subdir)]
-            if founds and self.stopWhenFound:
-                return founds
-            folders += [dirpath+sep+subdir for subdir in founds]
-            for subdir in founds:
-                if not self.goIntoFoundFolder:
-                    subdirs.remove(subdir)
+            toberemoved = []
+            for subdir in subdirs:
+                if compiled.search(subdir):
+                    found = True
+                    toberemoved.append(subdir)
+                    if isftp:
+                        yield dirpath + '/' + subdir
+                    else:
+                        yield Path(dirpath)/subdir
+            if not self.goIntoFoundFolder:
+                for folder in toberemoved:
+                    subdirs.remove(folder)
+            if self.stopWhenFound and found:
+                break
             for avoidFolder in self.avoidFolders:
                 if avoidFolder in subdirs:
                     subdirs.remove(avoidFolder)
-        logging.debug('{} folders found'.format(len(folders)))
-        return folders
 
     def _walkFile(self, path):
+        initial_depth = str(self.parent).count(os.path.sep)
         for root, dirs, files in os.walk(path):
             num_sep_this = root.count(os.path.sep)
             yield root, dirs, files
-            if self.initialDepth + self.depth <= num_sep_this and self.depth > -1:
+            if initial_depth + self.depth <= num_sep_this and self.depth > -1:
                 del dirs[:]
 
     def _walkZip(self, path):
@@ -277,10 +346,11 @@ class Finder():
         """
         Walk through FTP server's directory tree, based on a BFS algorithm.
         """
+        initial_depth = self.parent.count('/')
         dirs, nondirs = self._listdirFTP(path)
         num_sep_this = path.count('/')
         yield path, dirs, nondirs
-        if self.initialDepth + self.depth <= num_sep_this and self.depth > -1:
+        if initial_depth + self.depth <= num_sep_this and self.depth > -1:
             del dirs[:]
         for name in dirs:
             yield from self._walkFTP(path+'/'+name)
