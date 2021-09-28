@@ -1,11 +1,13 @@
 import setuptools
 
+# python .\setup.py sdist bdist_wheel
+
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="pyFileFinder", 
-    version="0.7",
+    version="0.8",
     author="20centCroak",
     author_email="",
     description="module to easily find files in system, zip archives or ftp servers using regex",
